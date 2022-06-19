@@ -24,6 +24,9 @@
     <ClCompile Include="Core\CPU\cpu.cpp">
       <Filter>File di origine</Filter>
     </ClCompile>
+    <ClCompile Include="Core\PI\pi.cpp">
+      <Filter>File di origine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\CPU\cpu.h">
@@ -36,6 +39,9 @@
       <Filter>File di intestazione</Filter>
     </ClInclude>
     <ClInclude Include="n64.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\PI\pi.h">
       <Filter>File di intestazione</Filter>
     </ClInclude>
   </ItemGroup>

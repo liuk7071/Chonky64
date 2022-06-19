@@ -4,6 +4,7 @@
 #include <cstdarg>
 #include <intrin.h>
 #include <WinSock2.h>
+#include <filesystem>
 #pragma comment(lib, "Ws2_32.lib")
 
 typedef uint8_t u8;
@@ -49,6 +50,7 @@ namespace Helpers {
 		if constexpr (write) {
 			T temp = htobe<T>(val);
 			memcpy(data, &temp, sizeof(T));
+			return 0;
 		}
 		else {
 			T result;
