@@ -11,6 +11,7 @@ public:
 		PI = piptr;
 		VI = viptr;
 		PI->rdram = this->rdram;
+		for (int i = 0; i < 0x400000; i++) rdram[i] = 0;
 	}
 
 	u8 dmem[0x1000];

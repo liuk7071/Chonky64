@@ -6,7 +6,7 @@ public:
 		if constexpr (sizeof(T) == 4) {
 			if (paddr == 0x04400000) ctrl = data;
 			else if (paddr == 0x04400004) origin = data;
-			else if (paddr == 0x04400008) width = data;
+			else if (paddr == 0x04400008) { width = data; update_texture = true; }
 			else if (paddr == 0x0440000c) v_intr = data;
 			else if (paddr == 0x04400010) return; // Writing anything to this register clears the currently triggered VI Interrupt
 			else if (paddr == 0x04400014) burst = data;
@@ -59,4 +59,6 @@ public:
 	u32 v_burst = 0;
 	u32 x_scale = 0;
 	u32 y_scale = 0;
+
+	bool update_texture = false;
 };

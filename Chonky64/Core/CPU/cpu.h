@@ -14,6 +14,7 @@ public:
 	void simulate_pif_rom();
 
 	void step();
+	int cycles = 0;
 
 	enum instructions {
 		SPECIAL = 0x00,
@@ -21,10 +22,13 @@ public:
 		JAL     = 0x03,
 		BEQ     = 0x04,
 		BNE     = 0x05,
+		BGTZ    = 0x07,
+		ADDI    = 0x08,
 		ADDIU   = 0x09,
 		ANDI    = 0x0c,
 		ORI     = 0x0d,
 		LUI     = 0x0f,
+		LB      = 0x20,
 		LH      = 0x21,
 		LW      = 0x23,
 		LBU     = 0x24,
@@ -36,10 +40,12 @@ public:
 	};
 	enum instructions_special {
 		SLL  = 0x00,
+		SRL  = 0x02,
 		JR   = 0x08,
 		JALR = 0x09,
 		ADD  = 0x20,
-		ADDU = 0x21
+		ADDU = 0x21,
+		SLT  = 0x2a
 	};
 
 	// Instructions
@@ -54,19 +60,24 @@ public:
 	inline void branch(u32 offset, bool cond);
 
 	void sll(instruction instr);
+	void srl(instruction instr);
 	void jr(instruction instr);
 	void jalr(instruction instr);
 	void add(instruction instr);
 	void addu(instruction instr);
+	void slt(instruction instr);
 
 	void j(instruction instr);
 	void jal(instruction instr);
 	void beq(instruction instr);
 	void bne(instruction instr);
+	void bgtz(instruction instr);
+	void addi(instruction instr);
 	void addiu(instruction instr);
 	void andi(instruction instr);
 	void ori(instruction instr);
 	void lui(instruction instr);
+	void lb(instruction instr);
 	void lh(instruction instr);
 	void lw(instruction instr);
 	void lbu(instruction instr);

@@ -16,6 +16,9 @@ typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
 
+#define LOG
+#undef LOG
+
 #ifndef HELPERS
 #define HELPERS
 namespace Helpers {
@@ -61,10 +64,12 @@ namespace Helpers {
 	}
 
 	inline void log(const char* fmt, ...) {
+#ifdef LOG
 		va_list args;
 		va_start(args, fmt);
 		vprintf(fmt, args);
 		va_end(args);
+#endif
 	}
 
 	inline void panic(const char* err, ...) {
