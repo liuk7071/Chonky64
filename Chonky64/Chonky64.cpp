@@ -5,8 +5,6 @@
 
 int main() {
     n64 N64;
-    u32 format = (N64.Memory.dmem[0] << 24) | (N64.Memory.dmem[1] << 16) | (N64.Memory.dmem[2] << 8) | (N64.Memory.dmem[3]);
-    printf("0x%08x\n", format);
 
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER);
     const auto window = SDL_CreateWindow("Chonky64", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 512, SDL_WINDOW_SHOWN);

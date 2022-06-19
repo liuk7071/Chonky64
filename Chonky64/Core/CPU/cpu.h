@@ -9,6 +9,7 @@ public:
 	u32 pc = 0xBFC00000;
 	std::optional<u32> branch_pc = std::nullopt;
 	u64 gprs[32];
+	u64 cop0_regs[32];
 	std::string gpr_names[32] = { "$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3","$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7","$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra" };
 
 	void simulate_pif_rom();
@@ -25,9 +26,15 @@ public:
 		BGTZ    = 0x07,
 		ADDI    = 0x08,
 		ADDIU   = 0x09,
+		SLTI    = 0x0a,
 		ANDI    = 0x0c,
 		ORI     = 0x0d,
+		XORI    = 0x0e,
 		LUI     = 0x0f,
+		COP0    = 0x10,
+		BEQL    = 0x14,
+		BNEL    = 0x15,
+		BLEZL   = 0x16,
 		LB      = 0x20,
 		LH      = 0x21,
 		LW      = 0x23,
@@ -45,7 +52,11 @@ public:
 		JALR = 0x09,
 		ADD  = 0x20,
 		ADDU = 0x21,
+		OR   = 0x25,
 		SLT  = 0x2a
+	};
+	enum instructions_cop0 {
+		MTC0 = 0x04
 	};
 
 	// Instructions
@@ -57,7 +68,7 @@ public:
 		u16 imm = 0;
 		u8 sa = 0;
 	};
-	inline void branch(u32 offset, bool cond);
+	inline void branch(u32 offset, bool cond, bool likely = false);
 
 	void sll(instruction instr);
 	void srl(instruction instr);
@@ -65,7 +76,10 @@ public:
 	void jalr(instruction instr);
 	void add(instruction instr);
 	void addu(instruction instr);
+	void or_(instruction instr);
 	void slt(instruction instr);
+
+	void mtc0(instruction instr);
 
 	void j(instruction instr);
 	void jal(instruction instr);
@@ -74,9 +88,14 @@ public:
 	void bgtz(instruction instr);
 	void addi(instruction instr);
 	void addiu(instruction instr);
+	void slti(instruction instr);
 	void andi(instruction instr);
 	void ori(instruction instr);
+	void xori(instruction instr);
 	void lui(instruction instr);
+	void beql(instruction instr);
+	void bnel(instruction instr);
+	void blezl(instruction instr);
 	void lb(instruction instr);
 	void lh(instruction instr);
 	void lw(instruction instr);

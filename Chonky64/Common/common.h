@@ -16,6 +16,10 @@ typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
 
+#define ROM_FORMAT_Z64 0x80371240
+#define ROM_FORMAT_N64 0x40123780
+#define ROM_FORMAT_V64 0x37804012
+
 #define LOG
 #undef LOG
 
@@ -61,6 +65,15 @@ namespace Helpers {
 	void write(u8* data, T val = 0) {
 		T temp = htobe<T>(val);
 		memcpy(data, &temp, sizeof(T));
+	}
+
+	inline void swap_region_v64(u8* data, int length) {
+		for (int i = 0; i < length; i += 2) {
+			u8 a = data[i];
+			u8 b = data[i + 1];
+			data[i] = b;
+			data[i + 1] = a;
+		}
 	}
 
 	inline void log(const char* fmt, ...) {

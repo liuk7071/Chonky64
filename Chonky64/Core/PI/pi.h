@@ -5,6 +5,7 @@ public:
 	void do_dma();
 	u8* rdram;
 	FILE* cart;
+	u32 cart_format = 0;
 	int file_size = 0;
 
 	template<typename T> void write(u32 paddr, T data) {
