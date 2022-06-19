@@ -32,7 +32,8 @@ public:
 	void write(u32 vaddr, T data) {
 		u32 paddr = vaddr_to_paddr(vaddr);
 
-		if (paddr >= 0x04600000 && paddr <= 0x046FFFFF) Pi->write<T>(paddr, data);
+		if (paddr >= 0x00000000 && paddr <= 0x003FFFFF) Helpers::access<T, true>(&rdram[paddr & 0x3fffff], data);
+		else if (paddr >= 0x04600000 && paddr <= 0x046FFFFF) Pi->write<T>(paddr, data);
 		else if (paddr >= 0x1FC007C0 && paddr <= 0x1FC007FF) Helpers::access<T, true>(&pif_ram[paddr & 0x3f], data);
 		else Helpers::panic("Unhandled write to address 0x%08x\n", paddr);
 	}

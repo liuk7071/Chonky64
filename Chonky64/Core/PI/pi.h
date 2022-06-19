@@ -22,7 +22,11 @@ public:
 		}
 	}
 	template<typename T> T read(u32 paddr) {
-		if constexpr (sizeof(T) == 4) {
+		if constexpr (sizeof(T) == 8) {
+			Helpers::panic("Unhandled PI 64bit read 0x%08x\n", paddr);
+			return 0;
+		}
+		else if constexpr (sizeof(T) == 4) {
 			if (paddr == 0x04600000) return dram_addr;
 			else if (paddr == 0x04600004) return cart_addr;
 			else if (paddr == 0x0460000c) return wr_len;
@@ -31,9 +35,11 @@ public:
 		}
 		else if constexpr (sizeof(T) == 2) {
 			Helpers::panic("Unhandled PI 16bit read 0x%08x\n", paddr);
+			return 0;
 		}
 		else if constexpr (sizeof(T) == 1) {
 			Helpers::panic("Unhandled PI 8bit read 0x%08x\n", paddr);
+			return 0;
 		}
 	}
 	u32 dram_addr = 0;
