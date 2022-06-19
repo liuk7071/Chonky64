@@ -31,6 +31,7 @@ namespace Helpers {
 		else if constexpr (sizeof(T) == 8) {
 			return htonll(val);
 		}
+		else if constexpr (sizeof(T) == 1) return val;
 	}
 	template <typename T>
 	T betoh(T val) {
@@ -43,6 +44,7 @@ namespace Helpers {
 		else if constexpr (sizeof(T) == 8) {
 			return ntohll(val);
 		}
+		else if constexpr (sizeof(T) == 1) return val;
 	}
 
 	template <typename T, bool write = false>

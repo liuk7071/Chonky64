@@ -145,12 +145,14 @@
     <ClCompile Include="Core\CPU\cpu.cpp" />
     <ClCompile Include="Core\Memory\memory.cpp" />
     <ClCompile Include="Core\PI\pi.cpp" />
+    <ClCompile Include="Core\VI\vi.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\common.h" />
     <ClInclude Include="Core\CPU\cpu.h" />
     <ClInclude Include="Core\Memory\memory.h" />
     <ClInclude Include="Core\PI\pi.h" />
+    <ClInclude Include="Core\VI\vi.h" />
     <ClInclude Include="n64.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

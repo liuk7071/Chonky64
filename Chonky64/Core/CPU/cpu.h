@@ -27,6 +27,7 @@ public:
 		LUI     = 0x0f,
 		LH      = 0x21,
 		LW      = 0x23,
+		LBU     = 0x24,
 		LHU     = 0x25,
 		SH      = 0x29,
 		SW      = 0x2b,
@@ -37,7 +38,8 @@ public:
 		SLL  = 0x00,
 		JR   = 0x08,
 		JALR = 0x09,
-		ADD  = 0x20
+		ADD  = 0x20,
+		ADDU = 0x21
 	};
 
 	// Instructions
@@ -55,6 +57,7 @@ public:
 	void jr(instruction instr);
 	void jalr(instruction instr);
 	void add(instruction instr);
+	void addu(instruction instr);
 
 	void j(instruction instr);
 	void jal(instruction instr);
@@ -66,6 +69,7 @@ public:
 	void lui(instruction instr);
 	void lh(instruction instr);
 	void lw(instruction instr);
+	void lbu(instruction instr);
 	void lhu(instruction instr);
 	void sh(instruction instr);
 	void sw(instruction instr);

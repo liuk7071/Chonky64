@@ -2,7 +2,8 @@
 
 class n64 {
 public:
-	pi Pi;
-	memory Memory = memory(&Pi);
+	pi PI;
+	vi VI;
+	memory Memory = memory(&PI, &VI);
 	cpu Cpu = cpu(&Memory);
 };

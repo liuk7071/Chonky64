@@ -4,14 +4,16 @@
 cpu::cpu(memory* memptr) {
 	Memory = memptr;
 	Memory->cart = fopen("C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\addiu_simpleboot.z64", "rb");
-	Memory->Pi->cart = fopen("C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\addiu_simpleboot.z64", "rb");
-	Memory->Pi->file_size = std::filesystem::file_size("C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\addiu_simpleboot.z64");
+	Memory->PI->cart = fopen("C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\addiu_simpleboot.z64", "rb");
+	Memory->PI->file_size = std::filesystem::file_size("C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\addiu_simpleboot.z64");
 	//Memory->cart = fopen("H:\\Games\\roms\\N64\\Super Mario 64 (USA).n64", "rb");
 	//Memory->cart = fopen("H:\\Games\\roms\\N64\\Namco Museum 64 (USA).n64", "rb");
 	simulate_pif_rom();
 }
 
 void cpu::step() {
+	gprs[0] = 0;
+
 	const u32 instr = Memory->read<u32>(pc);
 	const u8 rs = (instr >> 21) & 0x1f;
 	const u8 rd = (instr >> 11) & 0x1f;
@@ -35,6 +37,7 @@ void cpu::step() {
 		case instructions_special::JR:   jr(inst); break;
 		case instructions_special::JALR: jalr(inst); break;
 		case instructions_special::ADD:  add(inst); break;
+		case instructions_special::ADDU: addu(inst); break;
 		default:
 			Helpers::panic("Unhandled special instruction 0x%02x\n", instr & 0x3f);
 		}
@@ -50,6 +53,7 @@ void cpu::step() {
 	case instructions::LUI:   lui(inst); break;
 	case instructions::LH:    lh(inst); break;
 	case instructions::LW:    lw(inst); break;
+	case instructions::LBU:   lbu(inst); break;
 	case instructions::LHU:   lhu(inst); break;
 	case instructions::SH:    sh(inst); break;
 	case instructions::SW:    sw(inst); break;
@@ -103,10 +107,17 @@ void cpu::jalr(instruction instr) {
 	gprs[instr.rd] = pc + 4;
 }
 void cpu::add(instruction instr) {
-	Helpers::log("add %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	Helpers::log("add %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
 	s32 a = (s32)gprs[instr.rs];
 	s32 b = (s32)gprs[instr.rt];
 	s32 res = a + b; // TODO: check for integer overflow
+	gprs[instr.rd] = res;
+}
+void cpu::addu(instruction instr) {
+	Helpers::log("addu %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	s32 a = (s32)gprs[instr.rs];
+	s32 b = (s32)gprs[instr.rt];
+	s32 res = a + b;
 	gprs[instr.rd] = res;
 }
 
@@ -166,6 +177,12 @@ void cpu::lw(instruction instr) {
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("lw %s, 0x%04x(%s)  ;  %s <- [0x%08x]\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), addr);
 	gprs[instr.rt] = (s64)(s32)Memory->read<u32>(addr);
+}
+void cpu::lbu(instruction instr) {
+	s32 offset = (s32)(s16)instr.imm;
+	u32 addr = gprs[instr.rs] + offset;
+	Helpers::log("lbu %s, 0x%04x(%s)  ;  %s <- [0x%08x]\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), addr);
+	gprs[instr.rt] = Memory->read<u8>(addr);
 }
 void cpu::lhu(instruction instr) {
 	s32 offset = (s32)(s16)instr.imm;
