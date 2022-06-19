@@ -47,18 +47,17 @@ namespace Helpers {
 		else if constexpr (sizeof(T) == 1) return val;
 	}
 
-	template <typename T, bool write = false>
-	T access(u8* data, T val = 0) {
-		if constexpr (write) {
-			T temp = htobe<T>(val);
-			memcpy(data, &temp, sizeof(T));
-			return 0;
-		}
-		else {
-			T result;
-			memcpy(&result, data, sizeof(T));
-			return betoh<T>(result);
-		}
+	template <typename T>
+	T read(u8* data) {
+		T result;
+		memcpy(&result, data, sizeof(T));
+		return betoh<T>(result);
+	}
+
+	template <typename T>
+	void write(u8* data, T val = 0) {
+		T temp = htobe<T>(val);
+		memcpy(data, &temp, sizeof(T));
 	}
 
 	inline void log(const char* fmt, ...) {
