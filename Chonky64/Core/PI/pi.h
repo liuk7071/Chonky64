@@ -2,11 +2,13 @@
 
 class pi {
 public:
+	void load_cart(const char* path);
 	void do_dma();
 	u8* rdram;
 	FILE* cart;
 	u32 cart_format = 0;
-	int file_size = 0;
+	int file_mask = 0;
+	std::vector<u8> cart_data;
 
 	template<typename T> void write(u32 paddr, T data) {
 		if constexpr (sizeof(T) == 4) {

@@ -4,7 +4,7 @@
 
 class memory {
 public:
-	u8* rdram = new u8[0x400000];
+	u8* rdram = new u8[0x800000];
 	pi* PI;
 	vi* VI;
 	memory(pi* piptr, vi* viptr) {
@@ -25,12 +25,14 @@ public:
 		u32 paddr = vaddr_to_paddr(vaddr);
 		T ret = 0;
 
-		if (paddr >= 0x00000000 && paddr <= 0x003FFFFF) ret = Helpers::read<T>(&rdram[paddr & 0x3fffff]);
+		if (paddr >= 0x00000000 && paddr <= 0x007FFFFF) ret = Helpers::read<T>(&rdram[paddr & 0x7fffff]);
+		else if (paddr >= 0x03F00000 && paddr <= 0x03FFFFFF) ret = 0; // "RDRAM MMIO, configures timings, etc. Irrelevant for emulation."
 		else if (paddr >= 0x04000000 && paddr <= 0x04000FFF) ret = Helpers::read<T>(&dmem[paddr & 0xfff]);
 		else if (paddr >= 0x04001000 && paddr <= 0x04001FFF) ret = Helpers::read<T>(&imem[paddr & 0xfff]);
-		else if (paddr >= 0x04300000 && paddr <= 0x043FFFFF) { ret = 0;  Helpers::log("[MI] IGNORED MI READ 0x%08x\n", paddr); }
+		else if (paddr >= 0x04300000 && paddr <= 0x043FFFFF) { ret = 0;  printf("[MI] IGNORED MI READ 0x%08x\n", paddr); }
 		else if (paddr >= 0x04600000 && paddr <= 0x046FFFFF) ret = PI->read<T>(paddr);
 		else if (paddr >= 0x04700000 && paddr <= 0x047FFFFF) ret = 0; // "Control RDRAM settings (timings?) Irrelevant for emulation."
+		else if (paddr >= 0x10000000 && paddr <= 0x1FBFFFFF) ret = Helpers::read<T>(&PI->cart_data[paddr & PI->file_mask]);
 		else Helpers::panic("Unhandled read from address 0x%08x\n", paddr);
 
 		return ret;
@@ -43,7 +45,7 @@ public:
 		if (paddr >= 0x00000000 && paddr <= 0x003FFFFF) Helpers::write<T>(&rdram[paddr & 0x3fffff], data);
 		else if (paddr >= 0x03F00000 && paddr <= 0x03FFFFFF) return; // "RDRAM MMIO, configures timings, etc. Irrelevant for emulation."
 		else if (paddr >= 0x04001000 && paddr <= 0x04001FFF) Helpers::write<T>(&imem[paddr & 0xfff], data);
-		else if (paddr >= 0x04300000 && paddr <= 0x043FFFFF) Helpers::log("[MI] IGNORED MI WRITE 0x%08x\n", paddr);
+		else if (paddr >= 0x04300000 && paddr <= 0x043FFFFF) printf("[MI] IGNORED MI WRITE 0x%08x\n", paddr);
 		else if (paddr >= 0x04400000 && paddr <= 0x044FFFFF) VI->write<T>(paddr, data);
 		else if (paddr >= 0x04600000 && paddr <= 0x046FFFFF) PI->write<T>(paddr, data);
 		else if (paddr >= 0x04700000 && paddr <= 0x047FFFFF) return; // "Control RDRAM settings (timings?) Irrelevant for emulation."

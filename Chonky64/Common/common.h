@@ -5,6 +5,8 @@
 #include <intrin.h>
 #include <WinSock2.h>
 #include <filesystem>
+#include <vector>
+#include <fstream>
 #pragma comment(lib, "Ws2_32.lib")
 
 typedef uint8_t u8;

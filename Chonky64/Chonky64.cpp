@@ -34,6 +34,9 @@ int main() {
             SDL_RenderCopy(renderer, frame, NULL, NULL);
             SDL_RenderPresent(renderer);
             N64.Cpu.cycles = 0;
+            printf("pc: 0x%08x\n", N64.Cpu.pc);
+            //std::ofstream file("rdram.bin", std::ios::binary);
+            //file.write((const char*)N64.Memory.rdram, 0x800000);
         }
         N64.Cpu.step();
     }

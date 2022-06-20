@@ -4,19 +4,18 @@
 cpu::cpu(memory* memptr) {
 	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\addiu_simpleboot.z64";
 	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\basic_simpleboot.z64";
-	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\sll_simpleboot.z64";
+	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\or_simpleboot.z64";
+	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests\\addiu.z64";
 	const char* path = "H:\\Games\\roms\\N64\\Namco Museum 64 (USA).n64";
 	//const char* path = "H:\\Games\\roms\\N64\\Super Mario 64 (USA).n64";
 	Memory = memptr;
 	Memory->cart = fopen(path, "rb");
 	Memory->PI->cart = fopen(path, "rb");
 	int size = std::filesystem::file_size(path);
-	Memory->PI->file_size = pow(2, ceil(log(size) / log(2)));
-
-	u32 format = (Memory->dmem[0] << 24) | (Memory->dmem[1] << 16) | (Memory->dmem[2] << 8) | (Memory->dmem[3]);
-	Memory->PI->cart_format = format;
+	Memory->PI->file_mask = pow(2, ceil(log(size) / log(2)));
 
 	simulate_pif_rom();
+	Memory->PI->load_cart(path);
 }
 
 void cpu::step() {
@@ -42,16 +41,34 @@ void cpu::step() {
 	switch ((instr >> 26) & 0x3f) {
 	case instructions::SPECIAL: {
 		switch (instr & 0x3f) {
-		case instructions_special::SLL:  sll(inst); break;
-		case instructions_special::SRL:  srl(inst); break;
-		case instructions_special::JR:   jr(inst); break;
-		case instructions_special::JALR: jalr(inst); break;
-		case instructions_special::ADD:  add(inst); break;
-		case instructions_special::ADDU: addu(inst); break;
-		case instructions_special::OR:   or_(inst); break;
-		case instructions_special::SLT:  slt(inst); break;
+		case instructions_special::SLL:   sll(inst); break;
+		case instructions_special::SRL:   srl(inst); break;
+		case instructions_special::SLLV:  sllv(inst); break;
+		case instructions_special::SRLV:  srlv(inst); break;
+		case instructions_special::JR:    jr(inst); break;
+		case instructions_special::JALR:  jalr(inst); break;
+		case instructions_special::MFHI:  mfhi(inst); break;
+		case instructions_special::MFLO:  mflo(inst); break;
+		case instructions_special::MULTU: multu(inst); break;
+		case instructions_special::ADD:   add(inst); break;
+		case instructions_special::ADDU:  addu(inst); break;
+		case instructions_special::SUBU:  subu(inst); break;
+		case instructions_special::AND:   and_(inst); break;
+		case instructions_special::OR:    or_(inst); break;
+		case instructions_special::XOR:   xor_(inst); break;
+		case instructions_special::SLT:   slt(inst); break;
+		case instructions_special::SLTU:  sltu(inst); break;
 		default:
 			Helpers::panic("Unhandled special instruction 0x%02x\n", instr & 0x3f);
+		}
+		break;
+	}
+	case instructions::REGIMM: {
+		switch ((instr >> 16) & 0x1f) {
+		case instructions_regimm::BGEZL:  bgezl(inst); break;
+		case instructions_regimm::BGEZAL: bgezal(inst); break;
+		default:
+			Helpers::panic("Unhandled regimm instruction 0x%02x\n", (instr >> 16) & 0x1f);
 		}
 		break;
 	}
@@ -83,8 +100,11 @@ void cpu::step() {
 	case instructions::LW:    lw(inst); break;
 	case instructions::LBU:   lbu(inst); break;
 	case instructions::LHU:   lhu(inst); break;
+	case instructions::LWU:   lwu(inst); break;
+	case instructions::SB:    sb(inst); break;
 	case instructions::SH:    sh(inst); break;
 	case instructions::SW:    sw(inst); break;
+	case instructions::CACHE: cache(inst); break;
 	case instructions::LD:    ld(inst); break;
 	case instructions::SD:    sd(inst); break;
 	
@@ -106,6 +126,8 @@ void cpu::simulate_pif_rom() {
 	fread(Memory->dmem, sizeof(u8), 0x1000, Memory->cart);
 
 	u32 format = (Memory->dmem[0] << 24) | (Memory->dmem[1] << 16) | (Memory->dmem[2] << 8) | (Memory->dmem[3]);
+	Memory->PI->cart_format = format;
+
 	printf("0x%08x\n", format);
 	switch (format) {
 	case ROM_FORMAT_V64: Helpers::swap_region_v64(Memory->dmem, 0x1000);
@@ -115,18 +137,28 @@ void cpu::simulate_pif_rom() {
 }
 
 inline void cpu::branch(u32 offset, bool cond, bool likely) {
-	if (cond) branch_pc = pc + offset + 4;
+	if (cond) branch_pc = pc + offset;
 	else if (likely) pc += 4;
 }
 // Instructions
 void cpu::sll(instruction instr) {
 	Helpers::log("sll %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), instr.sa);
-	s32 shifted = (s32)gprs[instr.rt] << instr.sa;
+	s32 shifted = (u32)gprs[instr.rt] << instr.sa;
 	gprs[instr.rd] = (s64)shifted;
 }
 void cpu::srl(instruction instr) {
 	Helpers::log("srl %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), instr.sa);
-	s32 shifted = (s32)gprs[instr.rt] >> instr.sa;
+	s32 shifted = (u32)gprs[instr.rt] >> instr.sa;
+	gprs[instr.rd] = (s64)shifted;
+}
+void cpu::sllv(instruction instr) {
+	Helpers::log("sllv %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	s32 shifted = (u32)gprs[instr.rt] << (gprs[instr.rs] & 0x1f);
+	gprs[instr.rd] = (s64)shifted;
+}
+void cpu::srlv(instruction instr) {
+	Helpers::log("srlv %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	s32 shifted = (u32)gprs[instr.rt] >> (gprs[instr.rs] & 0x1f);
 	gprs[instr.rd] = (s64)shifted;
 }
 void cpu::jr(instruction instr) {
@@ -148,6 +180,22 @@ void cpu::jalr(instruction instr) {
 	branch_pc = gprs[instr.rs];
 	gprs[instr.rd] = pc + 8;
 }
+void cpu::mfhi(instruction instr) {
+	Helpers::log("mfhi %s\n", gpr_names[instr.rd].c_str());
+	gprs[instr.rd] = hi;
+}
+void cpu::mflo(instruction instr) {
+	Helpers::log("mflo %s\n", gpr_names[instr.rd].c_str());
+	gprs[instr.rd] = lo;
+}
+void cpu::multu(instruction instr) {
+	Helpers::log("multu %s, %s\n", gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	u32 a = (u32)gprs[instr.rs];
+	u32 b = (u32)gprs[instr.rt];
+	s64 res = a * b;
+	hi = (s64)(s32)((res >> 32) & 0xffffffff);
+	lo = (s64)(s32)(res & 0xffffffff);
+}
 void cpu::add(instruction instr) {
 	Helpers::log("add %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
 	s32 a = (s32)gprs[instr.rs];
@@ -162,13 +210,44 @@ void cpu::addu(instruction instr) {
 	s32 res = a + b;
 	gprs[instr.rd] = res;
 }
+void cpu::subu(instruction instr) {
+	Helpers::log("subu %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	s32 a = (s32)gprs[instr.rs];
+	s32 b = (s32)gprs[instr.rt];
+	s32 res = a - b;
+	gprs[instr.rd] = res;
+}
+void cpu::and_(instruction instr) {
+	Helpers::log("and %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	gprs[instr.rd] = gprs[instr.rs] & gprs[instr.rt];
+}
 void cpu::or_(instruction instr) {
 	Helpers::log("or %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
 	gprs[instr.rd] = gprs[instr.rs] | gprs[instr.rt];
 }
+void cpu::xor_(instruction instr) {
+	Helpers::log("xor %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	gprs[instr.rd] = gprs[instr.rs] ^ gprs[instr.rt];
+}
 void cpu::slt(instruction instr) {
 	Helpers::log("slt %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
-	gprs[instr.rd] = (gprs[instr.rs] < gprs[instr.rt]) ? 1 : 0;
+	gprs[instr.rd] = ((s64)gprs[instr.rs] < (s64)gprs[instr.rt]);
+}
+void cpu::sltu(instruction instr) {
+	Helpers::log("sltu %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	gprs[instr.rd] = (gprs[instr.rs] < gprs[instr.rt]);
+}
+
+void cpu::bgezl(instruction instr) {
+	s32 offset = (s32)(s16)(instr.imm << 2);
+	Helpers::log("bgezl %s, 0x%04x\n", gpr_names[instr.rs].c_str(), offset);
+	branch(offset, gprs[instr.rs] >= 0, true);
+}
+void cpu::bgezal(instruction instr) {
+	s32 offset = (s32)(s16)(instr.imm << 2);
+	Helpers::log("bgezl %s, 0x%04x\n", gpr_names[instr.rs].c_str(), offset);
+	branch(offset, gprs[instr.rs] >= 0);
+	gprs[31] = pc + 8;
 }
 
 void cpu::mtc0(instruction instr) {
@@ -222,7 +301,7 @@ void cpu::addiu(instruction instr) {
 }
 void cpu::slti(instruction instr) {
 	Helpers::log("slti %s, %s, 0x%04x\n", gpr_names[instr.rt].c_str(), gpr_names[instr.rs].c_str(), instr.imm);
-	gprs[instr.rt] = (gprs[instr.rs] < (u64)(s16)instr.imm) ? 1 : 0;
+	gprs[instr.rt] = (s64)gprs[instr.rs] < (s64)(s16)instr.imm;
 }
 void cpu::andi(instruction instr) {
 	Helpers::log("andi %s, %s, 0x%04x\n", gpr_names[instr.rt].c_str(), gpr_names[instr.rs].c_str(), instr.imm);
@@ -257,55 +336,70 @@ void cpu::blezl(instruction instr) {
 	branch(offset, gprs[instr.rs] <= 0, true);
 }
 void cpu::lb(instruction instr) {
-	s32 offset = (s32)(s16)instr.imm;
+	s16 offset = (s16)instr.imm;
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("lb %s, 0x%04x(%s)  ;  %s <- [0x%08x]\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), addr);
 	gprs[instr.rt] = (s64)(s8)Memory->read<u8>(addr);
 }
 void cpu::lh(instruction instr) {
-	s32 offset = (s32)(s16)instr.imm;
+	s16 offset = (s16)instr.imm;
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("lh %s, 0x%04x(%s)  ;  %s <- [0x%08x]\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), addr);
 	gprs[instr.rt] = (s64)(s16)Memory->read<u16>(addr);
 }
 void cpu::lw(instruction instr) {
-	s32 offset = (s32)(s16)instr.imm;
+	s16 offset = (s16)instr.imm;
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("lw %s, 0x%04x(%s)  ;  %s <- [0x%08x]\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), addr);
 	gprs[instr.rt] = (s64)(s32)Memory->read<u32>(addr);
 }
 void cpu::lbu(instruction instr) {
-	s32 offset = (s32)(s16)instr.imm;
+	s16 offset = (s16)instr.imm;
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("lbu %s, 0x%04x(%s)  ;  %s <- [0x%08x]\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), addr);
 	gprs[instr.rt] = Memory->read<u8>(addr);
 }
 void cpu::lhu(instruction instr) {
-	s32 offset = (s32)(s16)instr.imm;
+	s16 offset = (s16)instr.imm;
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("lhu %s, 0x%04x(%s)  ;  %s <- [0x%08x]\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), addr);
 	gprs[instr.rt] = Memory->read<u16>(addr);
 }
+void cpu::lwu(instruction instr) {
+	s16 offset = (s16)instr.imm;
+	u32 addr = gprs[instr.rs] + offset;
+	Helpers::log("lwu %s, 0x%04x(%s)  ;  %s <- [0x%08x]\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), addr);
+	gprs[instr.rt] = Memory->read<u32>(addr);
+}
+void cpu::sb(instruction instr) {
+	s16 offset = (s16)instr.imm;
+	u32 addr = gprs[instr.rs] + offset;
+	Helpers::log("sb %s, 0x%04x(%s)  ;  [0x%08x] <- 0x%02x\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), addr, gprs[instr.rt]);
+	Memory->write<u8>(addr, gprs[instr.rt]);
+}
 void cpu::sh(instruction instr) {
-	s32 offset = (s32)(s16)instr.imm;
+	s16 offset = (s16)instr.imm;
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("sh %s, 0x%04x(%s)  ;  [0x%08x] <- 0x%04x\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), addr, gprs[instr.rt]);
 	Memory->write<u16>(addr, gprs[instr.rt]);
 }
 void cpu::sw(instruction instr) {
-	s32 offset = (s32)(s16)instr.imm;
+	s16 offset = (s16)instr.imm;
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("sw %s, 0x%04x(%s)  ;  [0x%08x] <- 0x%08x\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), addr, gprs[instr.rt]);
 	Memory->write<u32>(addr, gprs[instr.rt]);
 }
+void cpu::cache(instruction instr) {
+	Helpers::log("cache (unimplemented)");
+}
 void cpu::ld(instruction instr) {
-	s32 offset = (s32)(s16)instr.imm;
+	s16 offset = (s16)instr.imm;
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("ld %s, 0x%04x(%s)  ;  %s <- [0x%08x]\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), addr);
 	gprs[instr.rt] = Memory->read<u64>(addr);
 }
 void cpu::sd(instruction instr) {
-	s32 offset = (s32)(s16)instr.imm;
+	s16 offset = (s16)instr.imm;
 	u32 addr = gprs[instr.rs] + offset;
 	Helpers::log("sd %s, 0x%04x(%s)  ;  [0x%08x] <- 0x%016x\n", gpr_names[instr.rt].c_str(), offset, gpr_names[instr.rs].c_str(), addr, gprs[instr.rt]);
 	Memory->write<u64>(addr, gprs[instr.rt]);
