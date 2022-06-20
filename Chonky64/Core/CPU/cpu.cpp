@@ -137,7 +137,7 @@ void cpu::simulate_pif_rom() {
 }
 
 inline void cpu::branch(u32 offset, bool cond, bool likely) {
-	if (cond) branch_pc = pc + offset;
+	if (cond) branch_pc = pc + offset + 4;
 	else if (likely) pc += 4;
 }
 // Instructions
@@ -239,12 +239,14 @@ void cpu::sltu(instruction instr) {
 }
 
 void cpu::bgezl(instruction instr) {
-	s32 offset = (s32)(s16)(instr.imm << 2);
+	s32 offset = (s32)(s16)(instr.imm);
+	offset <<= 2;
 	Helpers::log("bgezl %s, 0x%04x\n", gpr_names[instr.rs].c_str(), offset);
 	branch(offset, gprs[instr.rs] >= 0, true);
 }
 void cpu::bgezal(instruction instr) {
-	s32 offset = (s32)(s16)(instr.imm << 2);
+	s32 offset = (s32)(s16)(instr.imm);
+	offset <<= 2;
 	Helpers::log("bgezl %s, 0x%04x\n", gpr_names[instr.rs].c_str(), offset);
 	branch(offset, gprs[instr.rs] >= 0);
 	gprs[31] = pc + 8;
@@ -271,17 +273,20 @@ void cpu::jal(instruction instr) {
 	gprs[31] = pc + 8;
 }
 void cpu::beq(instruction instr) {
-	s32 offset = (s32)(s16)(instr.imm << 2);
+	s32 offset = (s32)(s16)(instr.imm);
+	offset <<= 2;
 	Helpers::log("beq %s, %s, 0x%04x\n", gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), offset);
 	branch(offset, gprs[instr.rs] == gprs[instr.rt]);
 }
 void cpu::bne(instruction instr) {
-	s32 offset = (s32)(s16)(instr.imm << 2);
+	s32 offset = (s32)(s16)(instr.imm);
+	offset <<= 2;
 	Helpers::log("bne %s, %s, 0x%04x\n", gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), offset);
 	branch(offset, gprs[instr.rs] != gprs[instr.rt]);
 }
 void cpu::bgtz(instruction instr) {
-	s32 offset = (s32)(s16)(instr.imm << 2);
+	s32 offset = (s32)(s16)(instr.imm);
+	offset <<= 2;
 	Helpers::log("bgtz %s, 0x%04x\n", gpr_names[instr.rs].c_str(), offset);
 	branch(offset, gprs[instr.rs] > 0);
 }
@@ -321,17 +326,20 @@ void cpu::lui(instruction instr) {
 	gprs[instr.rt] = (s64)(imm_shifted);
 }
 void cpu::beql(instruction instr) {
-	s32 offset = (s32)(s16)(instr.imm << 2);
+	s32 offset = (s32)(s16)(instr.imm);
+	offset <<= 2;
 	Helpers::log("beql %s, %s, 0x%04x\n", gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), offset);
 	branch(offset, gprs[instr.rs] == gprs[instr.rt], true);
 }
 void cpu::bnel(instruction instr) {
-	s32 offset = (s32)(s16)(instr.imm << 2);
+	s32 offset = (s32)(s16)(instr.imm);
+	offset <<= 2;
 	Helpers::log("bnel %s, %s, 0x%04x\n", gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str(), offset);
 	branch(offset, gprs[instr.rs] != gprs[instr.rt], true);
 }
 void cpu::blezl(instruction instr) {
-	s32 offset = (s32)(s16)(instr.imm << 2);
+	s32 offset = (s32)(s16)(instr.imm);
+	offset <<= 2;
 	Helpers::log("blezl %s, 0x%04x\n", gpr_names[instr.rs].c_str(), offset);
 	branch(offset, gprs[instr.rs] <= 0, true);
 }
