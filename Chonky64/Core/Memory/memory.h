@@ -34,7 +34,9 @@ public:
 		else if (paddr >= 0x04400000 && paddr <= 0x044FFFFF) ret = VI->read<T>(paddr);
 		else if (paddr >= 0x04600000 && paddr <= 0x046FFFFF) ret = PI->read<T>(paddr);
 		else if (paddr >= 0x04700000 && paddr <= 0x047FFFFF) ret = 0; // "Control RDRAM settings (timings?) Irrelevant for emulation."
+		else if (paddr >= 0x04800000 && paddr <= 0x048FFFFF) printf("[SI] IGNORED SI READ 0x%08x\n", paddr);
 		else if (paddr >= 0x10000000 && paddr <= 0x1FBFFFFF) ret = Helpers::read<T>(&PI->cart_data[paddr & (PI->file_mask - 1)]); 
+		else if (paddr >= 0x1FC007C0 && paddr <= 0x1FC007FF) ret = Helpers::read<T>(&pif_ram[paddr & 0x3f]);
 		else Helpers::panic("Unhandled read from address 0x%08x\n", paddr);
 
 		return ret;

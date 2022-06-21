@@ -35,6 +35,14 @@ public:
 			else if (paddr == 0x04600004) return cart_addr;
 			else if (paddr == 0x0460000c) return wr_len;
 			else if (paddr == 0x04600010) return status;
+			else if (paddr == 0x04600014) return 0;
+			else if (paddr == 0x04600024) return 0;
+			else if (paddr == 0x04600018) return 0;
+			else if (paddr == 0x04600028) return 0;
+			else if (paddr == 0x0460001c) return 0;
+			else if (paddr == 0x0460002c) return 0;
+			else if (paddr == 0x04600020) return 0;
+			else if (paddr == 0x04600030) return 0;
 			else Helpers::panic("Unhandled PI 32bit read 0x%08x\n", paddr);
 		}
 		else if constexpr (sizeof(T) == 2) {

@@ -25,15 +25,18 @@ public:
 		JAL     = 0x03,
 		BEQ     = 0x04,
 		BNE     = 0x05,
+		BLEZ    = 0x06,
 		BGTZ    = 0x07,
 		ADDI    = 0x08,
 		ADDIU   = 0x09,
 		SLTI    = 0x0a,
+		SLTIU   = 0x0b,
 		ANDI    = 0x0c,
 		ORI     = 0x0d,
 		XORI    = 0x0e,
 		LUI     = 0x0f,
 		COP0    = 0x10,
+		FPU     = 0x11,
 		BEQL    = 0x14,
 		BNEL    = 0x15,
 		BLEZL   = 0x16,
@@ -53,13 +56,18 @@ public:
 	enum instructions_special {
 		SLL    = 0x00,
 		SRL    = 0x02,
+		SRA    = 0x03,
 		SLLV   = 0x04,
 		SRLV   = 0x06,
 		JR     = 0x08,
 		JALR   = 0x09,
 		MFHI   = 0x10,
+		MTHI   = 0x11,
 		MFLO   = 0x12,
+		MTLO   = 0x13,
+		MULT   = 0x18,
 		MULTU  = 0x19,
+		DIVU   = 0x1b,
 		ADD    = 0x20,
 		ADDU   = 0x21,
 		SUBU   = 0x23,
@@ -71,10 +79,12 @@ public:
 		DSRA32 = 0x3f
 	};
 	enum instructions_regimm {
+		BGEZ   = 0x01,
 		BGEZL  = 0x03,
 		BGEZAL = 0x11
 	};
 	enum instructions_cop0 {
+		MFC0 = 0x00,
 		MTC0 = 0x04
 	};
 
@@ -91,13 +101,18 @@ public:
 
 	void sll(instruction instr);
 	void srl(instruction instr);
+	void sra(instruction instr);
 	void sllv(instruction instr);
 	void srlv(instruction instr);
 	void jr(instruction instr);
 	void jalr(instruction instr);
 	void mfhi(instruction instr);
 	void mflo(instruction instr);
+	void mthi(instruction instr);
+	void mtlo(instruction instr);
+	void mult(instruction instr);
 	void multu(instruction instr);
+	void divu(instruction instr);
 	void add(instruction instr);
 	void addu(instruction instr);
 	void subu(instruction instr);
@@ -108,19 +123,23 @@ public:
 	void sltu(instruction instr);
 	void dsra32(instruction instr);
 
+	void bgez(instruction instr);
 	void bgezl(instruction instr);
 	void bgezal(instruction instr);
 
+	void mfc0(instruction instr);
 	void mtc0(instruction instr);
 
 	void j(instruction instr);
 	void jal(instruction instr);
 	void beq(instruction instr);
 	void bne(instruction instr);
+	void blez(instruction instr);
 	void bgtz(instruction instr);
 	void addi(instruction instr);
 	void addiu(instruction instr);
 	void slti(instruction instr);
+	void sltiu(instruction instr);
 	void andi(instruction instr);
 	void ori(instruction instr);
 	void xori(instruction instr);
