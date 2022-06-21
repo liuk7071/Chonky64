@@ -29,7 +29,7 @@ int main() {
                 frame = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, N64.VI.width, N64.VI.width * 0.75);
                 N64.Memory.VI->update_texture = false;
             }
-            SDL_UpdateTexture(frame, NULL, &N64.Memory.rdram[N64.VI.origin], N64.VI.width * sizeof(uint32_t));
+            SDL_UpdateTexture(frame, NULL, &N64.Memory.rdram[N64.VI.origin & 0x7fffff], N64.VI.width * sizeof(uint32_t));
             SDL_RenderClear(renderer);
             SDL_RenderCopy(renderer, frame, NULL, NULL);
             SDL_RenderPresent(renderer);

@@ -33,6 +33,7 @@ public:
 			return 0;
 		}
 		else if constexpr (sizeof(T) == 4) {
+			if (paddr == 0x04400010) return 0;
 			Helpers::panic("Unhandled VI 32bit read 0x%08x\n", paddr);
 			return 0;
 		}

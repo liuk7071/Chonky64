@@ -51,23 +51,24 @@ public:
 		SD      = 0x3f
 	};
 	enum instructions_special {
-		SLL   = 0x00,
-		SRL   = 0x02,
-		SLLV  = 0x04,
-		SRLV  = 0x06,
-		JR    = 0x08,
-		JALR  = 0x09,
-		MFHI  = 0x10,
-		MFLO  = 0x12,
-		MULTU = 0x19,
-		ADD   = 0x20,
-		ADDU  = 0x21,
-		SUBU  = 0x23,
-		AND   = 0x24,
-		OR    = 0x25,
-		XOR   = 0x26,
-		SLT   = 0x2a,
-		SLTU  = 0x2b
+		SLL    = 0x00,
+		SRL    = 0x02,
+		SLLV   = 0x04,
+		SRLV   = 0x06,
+		JR     = 0x08,
+		JALR   = 0x09,
+		MFHI   = 0x10,
+		MFLO   = 0x12,
+		MULTU  = 0x19,
+		ADD    = 0x20,
+		ADDU   = 0x21,
+		SUBU   = 0x23,
+		AND    = 0x24,
+		OR     = 0x25,
+		XOR    = 0x26,
+		SLT    = 0x2a,
+		SLTU   = 0x2b,
+		DSRA32 = 0x3f
 	};
 	enum instructions_regimm {
 		BGEZL  = 0x03,
@@ -105,6 +106,7 @@ public:
 	void xor_(instruction instr);
 	void slt(instruction instr);
 	void sltu(instruction instr);
+	void dsra32(instruction instr);
 
 	void bgezl(instruction instr);
 	void bgezal(instruction instr);

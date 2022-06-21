@@ -6,7 +6,8 @@ cpu::cpu(memory* memptr) {
 	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\basic_simpleboot.z64";
 	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\or_simpleboot.z64";
 	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests\\addiu.z64";
-	const char* path = "H:\\Games\\roms\\N64\\Namco Museum 64 (USA).n64";
+	//const char* path = "H:\\Games\\roms\\N64\\Namco Museum 64 (USA).n64";
+	const char* path = "C:\\Users\\zacse\\Downloads\\krom tests\\CPULW.n64";
 	//const char* path = "H:\\Games\\roms\\N64\\Super Mario 64 (USA).n64";
 	Memory = memptr;
 	Memory->cart = fopen(path, "rb");
@@ -21,6 +22,7 @@ cpu::cpu(memory* memptr) {
 void cpu::step() {
 	gprs[0] = 0;
 	cycles += 2;
+	//if (pc == 0x800001c8) pc += 4;
 
 	const u32 instr = Memory->read<u32>(pc);
 	const u8 rs = (instr >> 21) & 0x1f;
@@ -41,23 +43,24 @@ void cpu::step() {
 	switch ((instr >> 26) & 0x3f) {
 	case instructions::SPECIAL: {
 		switch (instr & 0x3f) {
-		case instructions_special::SLL:   sll(inst); break;
-		case instructions_special::SRL:   srl(inst); break;
-		case instructions_special::SLLV:  sllv(inst); break;
-		case instructions_special::SRLV:  srlv(inst); break;
-		case instructions_special::JR:    jr(inst); break;
-		case instructions_special::JALR:  jalr(inst); break;
-		case instructions_special::MFHI:  mfhi(inst); break;
-		case instructions_special::MFLO:  mflo(inst); break;
-		case instructions_special::MULTU: multu(inst); break;
-		case instructions_special::ADD:   add(inst); break;
-		case instructions_special::ADDU:  addu(inst); break;
-		case instructions_special::SUBU:  subu(inst); break;
-		case instructions_special::AND:   and_(inst); break;
-		case instructions_special::OR:    or_(inst); break;
-		case instructions_special::XOR:   xor_(inst); break;
-		case instructions_special::SLT:   slt(inst); break;
-		case instructions_special::SLTU:  sltu(inst); break;
+		case instructions_special::SLL:    sll(inst); break;
+		case instructions_special::SRL:    srl(inst); break;
+		case instructions_special::SLLV:   sllv(inst); break;
+		case instructions_special::SRLV:   srlv(inst); break;
+		case instructions_special::JR:     jr(inst); break;
+		case instructions_special::JALR:   jalr(inst); break;
+		case instructions_special::MFHI:   mfhi(inst); break;
+		case instructions_special::MFLO:   mflo(inst); break;
+		case instructions_special::MULTU:  multu(inst); break;
+		case instructions_special::ADD:    add(inst); break;
+		case instructions_special::ADDU:   addu(inst); break;
+		case instructions_special::SUBU:   subu(inst); break;
+		case instructions_special::AND:    and_(inst); break;
+		case instructions_special::OR:     or_(inst); break;
+		case instructions_special::XOR:    xor_(inst); break;
+		case instructions_special::SLT:    slt(inst); break;
+		case instructions_special::SLTU:   sltu(inst); break;
+		case instructions_special::DSRA32: dsra32(inst); break;
 		default:
 			Helpers::panic("Unhandled special instruction 0x%02x\n", instr & 0x3f);
 		}
@@ -142,12 +145,12 @@ inline void cpu::branch(u32 offset, bool cond, bool likely) {
 }
 // Instructions
 void cpu::sll(instruction instr) {
-	Helpers::log("sll %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), instr.sa);
+	Helpers::log("sll %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rt].c_str(), instr.sa);
 	s32 shifted = (u32)gprs[instr.rt] << instr.sa;
 	gprs[instr.rd] = (s64)shifted;
 }
 void cpu::srl(instruction instr) {
-	Helpers::log("srl %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), instr.sa);
+	Helpers::log("srl %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rt].c_str(), instr.sa);
 	s32 shifted = (u32)gprs[instr.rt] >> instr.sa;
 	gprs[instr.rd] = (s64)shifted;
 }
@@ -236,6 +239,11 @@ void cpu::slt(instruction instr) {
 void cpu::sltu(instruction instr) {
 	Helpers::log("sltu %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
 	gprs[instr.rd] = (gprs[instr.rs] < gprs[instr.rt]);
+}
+void cpu::dsra32(instruction instr) {
+	Helpers::log("dsra32 %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rt].c_str(), instr.sa);
+	s64 shifted = (s64)gprs[instr.rt] >> (instr.sa + 32);
+	gprs[instr.rd] = shifted;
 }
 
 void cpu::bgezl(instruction instr) {

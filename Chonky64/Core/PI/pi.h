@@ -15,6 +15,7 @@ public:
 			if (paddr == 0x04600000) dram_addr = data;
 			else if (paddr == 0x04600004) cart_addr = data;
 			else if (paddr == 0x0460000c) { wr_len = data; do_dma(); }
+			else if (paddr == 0x04600010) printf("[PI] Write to status\n"); // Should acknowledge interrupt
 			else Helpers::panic("Unhandled PI 32bit write 0x%08x\n", paddr);
 		}
 		else if constexpr (sizeof(T) == 2) {
