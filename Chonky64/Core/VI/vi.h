@@ -2,13 +2,16 @@
 
 class vi {
 public:
+	bool should_service_intr = false;
+	void step();
+
 	template<typename T> void write(u32 paddr, T data) {
 		if constexpr (sizeof(T) == 4) {
 			if (paddr == 0x04400000) ctrl = data;
 			else if (paddr == 0x04400004) origin = data;
 			else if (paddr == 0x04400008) { width = data; update_texture = true; }
 			else if (paddr == 0x0440000c) v_intr = data;
-			else if (paddr == 0x04400010) return; // Writing anything to this register clears the currently triggered VI Interrupt
+			else if (paddr == 0x04400010) should_service_intr = false;
 			else if (paddr == 0x04400014) burst = data;
 			else if (paddr == 0x04400018) v_sync = data;
 			else if (paddr == 0x0440001c) h_sync = data;
@@ -50,6 +53,7 @@ public:
 	u32 ctrl = 0;
 	u32 origin = 0;
 	u32 width = 0;
+	u32 current = 0;
 	u32 v_intr = 0;
 	u32 burst = 0;
 	u32 v_sync = 0;
@@ -61,5 +65,6 @@ public:
 	u32 x_scale = 0;
 	u32 y_scale = 0;
 
+	int line_counter = 0;
 	bool update_texture = false;
 };

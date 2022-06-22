@@ -2,6 +2,11 @@
 #include "../../Core/Memory/memory.h"
 #include <optional>
 
+#define COP0_STATUS 12
+#define COP0_CAUSE 13
+#define COP0_EPC 14
+#define COP0_ERROREPC 30
+
 class cpu {
 public:
 	memory* Memory;
@@ -15,8 +20,15 @@ public:
 
 	void simulate_pif_rom();
 
+	inline void check_vi_intr();
+	void handle_interrupts();
 	void step();
 	int cycles = 0;
+
+	enum exceptions {
+		INT = 0x00
+	};
+	void exception(exceptions exce);
 
 	enum instructions {
 		SPECIAL = 0x00,
@@ -50,6 +62,7 @@ public:
 		SH      = 0x29,
 		SW      = 0x2b,
 		CACHE   = 0x2f,
+		LWC1    = 0x31,
 		LD      = 0x37,
 		SD      = 0x3f
 	};
@@ -67,6 +80,7 @@ public:
 		MTLO   = 0x13,
 		MULT   = 0x18,
 		MULTU  = 0x19,
+		DIV    = 0x1a,
 		DIVU   = 0x1b,
 		ADD    = 0x20,
 		ADDU   = 0x21,
@@ -74,8 +88,11 @@ public:
 		AND    = 0x24,
 		OR     = 0x25,
 		XOR    = 0x26,
+		NOR    = 0x27,
 		SLT    = 0x2a,
 		SLTU   = 0x2b,
+		DSLL   = 0x38,
+		DSLL32 = 0x3c,
 		DSRA32 = 0x3f
 	};
 	enum instructions_regimm {
@@ -85,7 +102,12 @@ public:
 	};
 	enum instructions_cop0 {
 		MFC0 = 0x00,
-		MTC0 = 0x04
+		MTC0 = 0x04,
+		CO   = 0x10
+	};
+	enum operations_cop0 {
+		TLBWI = 0x02,
+		ERET  = 0x18
 	};
 
 	// Instructions
@@ -112,6 +134,7 @@ public:
 	void mtlo(instruction instr);
 	void mult(instruction instr);
 	void multu(instruction instr);
+	void div(instruction instr);
 	void divu(instruction instr);
 	void add(instruction instr);
 	void addu(instruction instr);
@@ -119,8 +142,11 @@ public:
 	void and_(instruction instr);
 	void or_(instruction instr);
 	void xor_(instruction instr);
+	void nor(instruction instr);
 	void slt(instruction instr);
 	void sltu(instruction instr);
+	void dsll(instruction instr);
+	void dsll32(instruction instr);
 	void dsra32(instruction instr);
 
 	void bgez(instruction instr);
@@ -129,6 +155,8 @@ public:
 
 	void mfc0(instruction instr);
 	void mtc0(instruction instr);
+	
+	void eret(instruction instr);
 
 	void j(instruction instr);
 	void jal(instruction instr);
@@ -157,6 +185,7 @@ public:
 	void sh(instruction instr);
 	void sw(instruction instr);
 	void cache(instruction instr);
+	void lwc1(instruction instr);
 	void ld(instruction instr);
 	void sd(instruction instr);
 };

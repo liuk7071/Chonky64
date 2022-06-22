@@ -23,10 +23,13 @@ typedef int64_t s64;
 #define ROM_FORMAT_V64 0x37804012
 
 #define LOG
-#undef LOG
 
 #ifndef HELPERS
 #define HELPERS
+static bool logbool = false;
+static bool log_after = false;
+static u64 log_after_amount = 12800000;
+
 namespace Helpers {
 
 	template <typename T>
@@ -80,10 +83,16 @@ namespace Helpers {
 
 	inline void log(const char* fmt, ...) {
 #ifdef LOG
-		va_list args;
-		va_start(args, fmt);
-		vprintf(fmt, args);
-		va_end(args);
+		if (log_after) {
+			log_after_amount--;
+			if (log_after_amount == 0) logbool = true;
+		}
+		if (logbool) {
+			va_list args;
+			va_start(args, fmt);
+			vprintf(fmt, args);
+			va_end(args);
+		}
 #endif
 	}
 

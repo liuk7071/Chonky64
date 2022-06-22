@@ -20,6 +20,10 @@ public:
 
 	u32 vaddr_to_paddr(u32 vaddr);
 
+	// There are few MI registers so I handle them here
+	u32 mi_intr_reg = 0;
+	u32 mi_intr_mask = 0;
+
 	template<typename T>
 	T read(u32 vaddr) {
 		u32 paddr = vaddr_to_paddr(vaddr);
@@ -30,8 +34,10 @@ public:
 		else if (paddr >= 0x04000000 && paddr <= 0x04000FFF) ret = Helpers::read<T>(&dmem[paddr & 0xfff]);
 		else if (paddr >= 0x04001000 && paddr <= 0x04001FFF) ret = Helpers::read<T>(&imem[paddr & 0xfff]);
 		else if (paddr >= 0x04040000 && paddr <= 0x040FFFFF) { ret = 0; printf("[SP] IGNORED SP REGS READ 0x%08x\n", paddr); }
+		else if (paddr == 0x0430000C && sizeof(T) == 4) ret = mi_intr_mask;
 		else if (paddr >= 0x04300000 && paddr <= 0x043FFFFF) { ret = 0;  printf("[MI] IGNORED MI READ 0x%08x\n", paddr); }
 		else if (paddr >= 0x04400000 && paddr <= 0x044FFFFF) ret = VI->read<T>(paddr);
+		else if (paddr >= 0x04500000 && paddr <= 0x045FFFFF) printf("[AI] IGNORED AI READ 0x%08x\n", paddr);
 		else if (paddr >= 0x04600000 && paddr <= 0x046FFFFF) ret = PI->read<T>(paddr);
 		else if (paddr >= 0x04700000 && paddr <= 0x047FFFFF) ret = 0; // "Control RDRAM settings (timings?) Irrelevant for emulation."
 		else if (paddr >= 0x04800000 && paddr <= 0x048FFFFF) printf("[SI] IGNORED SI READ 0x%08x\n", paddr);
@@ -46,11 +52,12 @@ public:
 	void write(u32 vaddr, T data) {
 		u32 paddr = vaddr_to_paddr(vaddr);
 
-		if (paddr >= 0x00000000 && paddr <= 0x003FFFFF) Helpers::write<T>(&rdram[paddr & 0x3fffff], data);
+		if (paddr >= 0x00000000 && paddr <= 0x007FFFFF) Helpers::write<T>(&rdram[paddr & 0x7fffff], data);
 		else if (paddr >= 0x03F00000 && paddr <= 0x03FFFFFF) return; // "RDRAM MMIO, configures timings, etc. Irrelevant for emulation."
 		else if (paddr >= 0x04000000 && paddr <= 0x04000FFF) Helpers::write<T>(&dmem[paddr & 0xfff], data);
 		else if (paddr >= 0x04001000 && paddr <= 0x04001FFF) Helpers::write<T>(&imem[paddr & 0xfff], data);
 		else if (paddr >= 0x04040000 && paddr <= 0x040FFFFF) printf("[SP] IGNORED SP REGS WRITE 0x%08x\n", paddr);
+		else if (paddr == 0x0430000C && sizeof(T) == 4) mi_intr_mask = data;
 		else if (paddr >= 0x04300000 && paddr <= 0x043FFFFF) printf("[MI] IGNORED MI WRITE 0x%08x\n", paddr);
 		else if (paddr >= 0x04400000 && paddr <= 0x044FFFFF) VI->write<T>(paddr, data);
 		else if (paddr >= 0x04500000 && paddr <= 0x045FFFFF) printf("[AI] IGNORED AI WRITE 0x%08x\n", paddr);

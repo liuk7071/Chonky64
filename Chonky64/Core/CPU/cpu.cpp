@@ -1,26 +1,62 @@
-#pragma warning(disable : 4996)
 #include "cpu.h"
 
 cpu::cpu(memory* memptr) {
-	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\addiu_simpleboot.z64";
-	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\basic_simpleboot.z64";
-	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests-simpleboot\\or_simpleboot.z64";
-	//const char* path = "C:\\Users\\zacse\\Downloads\\dillon-n64-tests\\basic.z64";
-	const char* path = "H:\\Games\\roms\\N64\\Namco Museum 64 (USA).n64";
-	//const char* path = "C:\\Users\\zacse\\Downloads\\krom tests\\CPULB.n64";
-	//const char* path = "H:\\Games\\roms\\N64\\Super Mario 64 (USA).n64";
 	Memory = memptr;
-	Memory->cart = fopen(path, "rb");
-	Memory->PI->cart = fopen(path, "rb");
-	int size = std::filesystem::file_size(path);
-	Memory->PI->file_mask = pow(2, ceil(log(size) / log(2)));
+}
 
-	simulate_pif_rom();
-	Memory->PI->load_cart(path);
+inline void cpu::check_vi_intr() {
+	if (Memory->VI->should_service_intr) {
+		Memory->mi_intr_reg |= (1 << 3);
+		Memory->VI->should_service_intr = false;
+	}
+}
+void cpu::handle_interrupts() {
+	check_vi_intr();
+
+	if (Memory->mi_intr_reg & Memory->mi_intr_mask) {
+		// im & ip
+		if ((cop0_regs[COP0_STATUS] & 0xff00) & (cop0_regs[COP0_STATUS] & 0xff00)) {
+			// ie
+			if (cop0_regs[COP0_STATUS] & 1) {
+				// exl and erl
+				if (((cop0_regs[COP0_STATUS] & 0b10) == 0) && ((cop0_regs[COP0_STATUS] & 0b100) == 0)) {
+					printf("[INTR] Interrupt serviced\n");
+					exception(exceptions::INT);
+				}
+			}
+		}
+	}
+}
+
+void cpu::exception(exceptions exce) {
+	if (branch_pc.has_value())
+		cop0_regs[COP0_CAUSE] |= (1ull << 31);
+	else
+		cop0_regs[COP0_CAUSE] &= ~(1ull << 31);
+
+	if (!((cop0_regs[COP0_STATUS] >> 1) & 1)) { // Check exl bit
+		cop0_regs[COP0_EPC] = pc;
+		if (branch_pc.has_value())
+			cop0_regs[COP0_EPC] -= 4;
+		cop0_regs[COP0_STATUS] |= 0b10; // Set exl bit
+	}
+	if (branch_pc.has_value()) {
+		branch_pc = std::nullopt;
+	}
+
+	cop0_regs[COP0_CAUSE] &= ~0b1111100;
+	cop0_regs[COP0_CAUSE] |= (u64)exce << 2;
+
+	// TODO: TLB exception handlers behave differently
+	if (cop0_regs[COP0_CAUSE] & 0x400000) // Check bev bit
+		pc = 0xBFC00380;
+	else
+		pc = 0x80000180;
 }
 
 void cpu::step() {
 	gprs[0] = 0;
+	handle_interrupts();
 	cycles += 2;
 
 	const u32 instr = Memory->read<u32>(pc);
@@ -33,10 +69,11 @@ void cpu::step() {
 
 	Helpers::log("[CPU] pc 0x%08x: ", pc);
 
+	bool should_clear_branch_pc = false;
 	if (branch_pc.has_value()) {
 		pc = branch_pc.value();
 		pc -= 4;
-		branch_pc = std::nullopt;
+		should_clear_branch_pc = true;
 	}
 
 	switch ((instr >> 26) & 0x3f) {
@@ -55,6 +92,7 @@ void cpu::step() {
 		case instructions_special::MTLO:   mtlo(inst); break;
 		case instructions_special::MULT:   mult(inst); break;
 		case instructions_special::MULTU:  multu(inst); break;
+		case instructions_special::DIV:    div(inst); break;
 		case instructions_special::DIVU:   divu(inst); break;
 		case instructions_special::ADD:    add(inst); break;
 		case instructions_special::ADDU:   addu(inst); break;
@@ -62,8 +100,11 @@ void cpu::step() {
 		case instructions_special::AND:    and_(inst); break;
 		case instructions_special::OR:     or_(inst); break;
 		case instructions_special::XOR:    xor_(inst); break;
+		case instructions_special::NOR:    nor(inst); break;
 		case instructions_special::SLT:    slt(inst); break;
 		case instructions_special::SLTU:   sltu(inst); break;
+		case instructions_special::DSLL:   dsll(inst); break;
+		case instructions_special::DSLL32: dsll32(inst); break;
 		case instructions_special::DSRA32: dsra32(inst); break;
 		default:
 			Helpers::panic("Unhandled special instruction 0x%02x\n", instr & 0x3f);
@@ -98,7 +139,15 @@ void cpu::step() {
 		switch ((instr >> 21) & 0x1f) {
 		case instructions_cop0::MFC0: mfc0(inst); break;
 		case instructions_cop0::MTC0: mtc0(inst); break;
-		case 0x10: break;
+		case instructions_cop0::CO: {
+			switch (instr & 0x3f) {
+			case operations_cop0::TLBWI: break; // TLBWI
+			case operations_cop0::ERET: eret(inst); break;
+			default:
+				Helpers::panic("Unhandled cop0 operation 0x%02x\n", (instr & 0x3f));
+			}
+			break;
+		}
 		default:
 			Helpers::panic("Unhandled cop0 instruction 0x%02x\n", (instr >> 21) & 0x1f);
 		}
@@ -118,11 +167,17 @@ void cpu::step() {
 	case instructions::SH:    sh(inst); break;
 	case instructions::SW:    sw(inst); break;
 	case instructions::CACHE: cache(inst); break;
+	case instructions::LWC1:  lwc1(inst); break;
 	case instructions::LD:    ld(inst); break;
 	case instructions::SD:    sd(inst); break;
 	
 	default:
 		Helpers::panic("Unhandled instruction 0x%02x\n", (instr >> 26) & 0x3f);
+	}
+
+	if (should_clear_branch_pc) {
+		branch_pc = std::nullopt;
+		should_clear_branch_pc = false;
 	}
 
 	pc += 4;
@@ -166,7 +221,7 @@ void cpu::srl(instruction instr) {
 }
 void cpu::sra(instruction instr) {
 	Helpers::log("sra %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rt].c_str(), instr.sa);
-	s32 shifted = (s32)gprs[instr.rt] >> instr.sa;
+	s32 shifted = (s64)gprs[instr.rt] >> instr.sa;
 	gprs[instr.rd] = (s64)shifted;
 }
 void cpu::sllv(instruction instr) {
@@ -230,6 +285,20 @@ void cpu::multu(instruction instr) {
 	hi = (s64)(s32)((res >> 32) & 0xffffffff);
 	lo = (s64)(s32)(res & 0xffffffff);
 }
+void cpu::div(instruction instr) {
+	Helpers::log("div %s, %s\n", gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	s32 a = (s32)gprs[instr.rs];
+	s32 b = (s32)gprs[instr.rt];
+	if (b == 0) {
+		hi = a;
+		lo = (a >= 0) ? -1 : 1;
+		return;
+	}
+	s64 res = (s64)a / (s64)b;
+	s64 rem = (s64)a % (s64)b;
+	hi = rem;
+	lo = res;
+}
 void cpu::divu(instruction instr) {
 	Helpers::log("divu %s, %s\n", gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
 	u32 a = (u32)gprs[instr.rs];
@@ -277,6 +346,10 @@ void cpu::xor_(instruction instr) {
 	Helpers::log("xor %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
 	gprs[instr.rd] = gprs[instr.rs] ^ gprs[instr.rt];
 }
+void cpu::nor(instruction instr) {
+	Helpers::log("nor %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
+	gprs[instr.rd] = ~(gprs[instr.rs] | gprs[instr.rt]);
+}
 void cpu::slt(instruction instr) {
 	Helpers::log("slt %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
 	gprs[instr.rd] = ((s64)gprs[instr.rs] < (s64)gprs[instr.rt]);
@@ -284,6 +357,16 @@ void cpu::slt(instruction instr) {
 void cpu::sltu(instruction instr) {
 	Helpers::log("sltu %s, %s, %s\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rs].c_str(), gpr_names[instr.rt].c_str());
 	gprs[instr.rd] = (gprs[instr.rs] < gprs[instr.rt]);
+}
+void cpu::dsll(instruction instr) {
+	Helpers::log("dsll %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rt].c_str(), instr.sa);
+	u64 shifted = gprs[instr.rt] << instr.sa;
+	gprs[instr.rd] = shifted;
+}
+void cpu::dsll32(instruction instr) {
+	Helpers::log("dsra32 %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rt].c_str(), instr.sa);
+	u64 shifted = gprs[instr.rt] << (instr.sa + 32);
+	gprs[instr.rd] = shifted;
 }
 void cpu::dsra32(instruction instr) {
 	Helpers::log("dsra32 %s, %s, 0x%04x\n", gpr_names[instr.rd].c_str(), gpr_names[instr.rt].c_str(), instr.sa);
@@ -318,6 +401,18 @@ void cpu::mfc0(instruction instr) {
 void cpu::mtc0(instruction instr) {
 	Helpers::log("mtc0 %s, cop0r%d\n", gpr_names[instr.rt].c_str(), gprs[instr.rd]);
 	cop0_regs[instr.rd] = gprs[instr.rt];
+}
+
+void cpu::eret(instruction instr) {
+	Helpers::log("eret\n");
+	if ((cop0_regs[COP0_STATUS] >> 2) & 1) { // Check erl bit
+		pc = cop0_regs[COP0_ERROREPC] - 4;
+		cop0_regs[COP0_STATUS] &= ~0b100; // Clear erl bit
+	}
+	else {
+		pc = cop0_regs[COP0_EPC] - 4;
+		cop0_regs[COP0_STATUS] &= ~0b10; // Clear exl bit
+	}
 }
 
 void cpu::j(instruction instr) {
@@ -472,6 +567,9 @@ void cpu::sw(instruction instr) {
 }
 void cpu::cache(instruction instr) {
 	Helpers::log("cache (unimplemented)");
+}
+void cpu::lwc1(instruction instr) {
+	Helpers::log("lwc1 (unimplemented)");
 }
 void cpu::ld(instruction instr) {
 	s32 offset = (s32)(s16)instr.imm;
